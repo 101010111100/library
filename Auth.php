@@ -18,10 +18,10 @@ abstract class Auth
      */
     public function hash($str)
     {
-        if ( ! self::$_config['hash_key'])
+        if ( ! Auth::$_config['hash_key'])
             throw new \Phalcon\Exception('A valid hash key must be set in your auth config.');
 
-        return hash_hmac(self::$_config['hash_method'], $str, self::$_config['hash_key']);
+        return hash_hmac(Auth::$_config['hash_method'], $str, Auth::$_config['hash_key']);
     }
     
     /**
@@ -32,12 +32,12 @@ abstract class Auth
      */
     public function get_user()
     {
-        $user = $this->session->get(self::$_config['session_key']);
+        $user = $this->session->get(Auth::$_config['session_key']);
 
         if ( ! $user)
         {
             // check for "remembered" login
-            $user = self::auto_login();
+            $user = Auth::auto_login();
         }
 
         return $user;
@@ -65,9 +65,6 @@ abstract class Auth
 
                     // Set the new token
                     Cookie::set('authautologin', $token->token, $token->expires - time());
-
-                    // Complete the login with the found data
-                    //$this->complete_login($token->user);
                     
                     // Finish the login
                     // Regenerate session_id
@@ -75,7 +72,7 @@ abstract class Auth
 
                     // Store user in session
                     $user = Arr::convert(Arr::merge(get_object_vars($user), array('roles' => $roles_arr)));
-                    $this->session->set(self::$_config['session_key'], $user);
+                    $this->session->set(Auth::$_config['session_key'], $user);
 
                     // Automatic login was successful
                     return $token->user;
@@ -151,24 +148,13 @@ abstract class Auth
         if (is_string($password))
         {
             // Create a hashed password
-            $password = self::hash($password);
+            $password = Auth::hash($password);
         }
 
-        //$role = Roles::findFirst(array('user_id=:user_id: AND name="login"', 'bind' => array('user_id' => $user->id)));
-        //$role = $user->getRoles("name='login'")->getFirst();
-        $roles = $user->getRoles();
-        $login = FALSE;
-        $roles_arr = array();
-        
-        foreach ($roles as $role)
-        {
-            if ($role->name == 'login')
-                $login = TRUE;
-            $roles_arr [$role->name]= TRUE;
-        }
+        $roles = Arr::from_model($user->getRoles(), 'name', 'id');
 
         // If the passwords match, perform a login
-        if ($user && $login && $user->password === $password)
+        if ($user && Arr::get($roles, 'login') && $user->password === $password)
         {
             if ($remember === TRUE)
             {
@@ -176,15 +162,13 @@ abstract class Auth
                 $token = new Tokens();
                 $token->user_id = $user->id;
                 $token->user_agent = sha1($this->request->getUserAgent());
-                $token->token = self::create_token();
+                $token->token = Auth::create_token();
                 $token->created = time();
-                $token->expires = time() + self::$_config['lifetime'];
-                echo Debug::dump($token->create(), 'created');
-                exit();
-                //$token->save();
+                $token->expires = time() + Auth::$_config['lifetime'];
+                $token->create();
                 
                 // Set the autologin cookie
-                Cookie::set('authautologin', $token->token, self::$_config['lifetime']);
+                Cookie::set('authautologin', $token->token, Auth::$_config['lifetime']);
             }
 
             // Finish the login
@@ -192,8 +176,8 @@ abstract class Auth
             session_regenerate_id();
 
             // Store user in session
-            $user = Arr::to_object(Arr::merge(get_object_vars($user), array('roles' => $roles_arr)));
-            $this->session->set(self::$_config['session_key'], $user);
+            $user = Arr::to_object(Arr::merge(get_object_vars($user), array('roles' => $roles)));
+            $this->session->set(Auth::$_config['session_key'], $user);
             
             return TRUE;
         }
@@ -218,14 +202,14 @@ abstract class Auth
         else
         {
             // Remove the user from the session
-            $this->session->remove(self::$_config['session_key']);
+            $this->session->remove(Auth::$_config['session_key']);
 
             // Regenerate session_id
             session_regenerate_id();
         }
 
         // Double check
-        return ! self::logged_in();
+        return ! Auth::logged_in();
     }
 
     /**
@@ -237,11 +221,11 @@ abstract class Auth
     public function logged_in($role = NULL)
     {
         // Get the user from the session
-        $user = self::get_user();
+        $user = Auth::get_user();
         if ( ! $user)
                 return FALSE;
         
-        //if ($user instanceof Users)
+        //if user exists in session
         if ($user)
         {
             // If we don't have a roll no further checking is needed
@@ -249,7 +233,7 @@ abstract class Auth
                 return TRUE;
 
             // Get role
-            $role = self::$_config['session_roles'] ? $user->roles->$role : Roles::findFirst(array('user_id=:user_id: AND name=:role:', 'bind' => array('user_id' => $user->id, 'role' => $role)));
+            $role = Auth::$_config['session_roles'] ? $user->roles->$role : Roles::findFirst(array('user_id=:user_id: AND name=:role:', 'bind' => array('user_id' => $user->id, 'role' => $role)));
 
             // Return true if user has role
             return $role ? TRUE : FALSE;
