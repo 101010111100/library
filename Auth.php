@@ -191,13 +191,37 @@ abstract class Auth
     }
     
     /**
-     * Log out a user by removing the related session variables.
+     * Log out a user by removing the related session variables
+     * Remove any autologin cookies.
      *
-     * @param   boolean  completely destroy the session
+     * @param   boolean  $destroy     completely destroy the session
+     * @param	boolean  $logout_all  remove all tokens for user
      * @return  boolean
      */
-    public function logout($destroy = FALSE)
+    public function logout($destroy = FALSE, $logout_all = FALSE)
     {
+        if ($token = Cookie::get('authautologin'))
+        {
+            // Delete the autologin cookie to prevent re-login
+            Cookie::delete('authautologin');
+
+            // Clear the autologin token from the database
+            $token = Tokens::findFirst(array('token=:token:', 'bind' => array('token' => $token)));
+
+            if ($logout_all)
+            {
+                // Delete all user tokens
+                foreach(Tokens::find(array('user_id=:user_id:', 'bind' => array('user_id' => $token->user_id) )) as $_token)
+                {
+                    $_token->delete();
+                }
+            }
+            else
+            {
+                $token->delete();
+            }
+        }
+        
         if ($destroy === TRUE)
         {
             // Destroy the session completely
