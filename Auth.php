@@ -56,9 +56,13 @@ abstract class Auth
             $token = Tokens::findFirst(array('token=:token:', 'bind' => array('token' => $token)));
             $user = $token->getUsers()->getFirst();
             
+            // If the token and user exists
             if ($token && $user)
             {
-                if ($token->user_agent === sha1($this->request->getUserAgent()))
+                $roles = Arr::from_model($user->getRoles(), 'name', 'id');
+                
+                //If user has login role and tokens match, perform a login
+                if (Arr::get($roles, 'login') && $token->user_agent === sha1($this->request->getUserAgent()))
                 {
                     // Save the token to create a new unique token
                     $token->save();
@@ -71,7 +75,7 @@ abstract class Auth
                     session_regenerate_id();
 
                     // Store user in session
-                    $user = Arr::convert(Arr::merge(get_object_vars($user), array('roles' => $roles_arr)));
+                    $user = Arr::to_object(Arr::merge(get_object_vars($user), array('roles' => $roles)));
                     $this->session->set(Auth::$_config['session_key'], $user);
 
                     // Automatic login was successful
