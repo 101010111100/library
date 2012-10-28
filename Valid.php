@@ -55,9 +55,9 @@ class Valid extends \Phalcon\Mvc\Model\Validator
             break;
             default:
                 $filtered = in_array($value, array(NULL, FALSE, '', array()), TRUE);
-                if ( ! $filtered)
+                if ($filtered)
                 {
-                    $this->appendMessage($this->isSetOption('message') ? $this->getOption('message') : __("Field :field must not be empty", array(':field' => "<em>" . ( $this->isSetOption('label') ? __($this->getOption('label')) : $field ) . "</em>" )), $field, "regex");
+                    $this->appendMessage($this->isSetOption('message') ? $this->getOption('message') : __("Field :field must not be empty", array(':field' => "<em>" . ( $this->isSetOption('label') ? __($this->getOption('label')) : $field ) . "</em>" )), $field, "not_empty");
                     return FALSE;
                 }
             break;
