@@ -29,6 +29,14 @@ class Valid extends \Phalcon\Mvc\Model\Validator
                     return FALSE;
                 }
             break;
+            case 'regex':
+                $filtered = preg_match($this->getOption('regex'), (string) $value);
+                if ( ! $filtered && $value !== '')
+                {
+                    $this->appendMessage($this->isSetOption('message') ? $this->getOption('message') : __("Field :field does not match the required format", array(':field' => "<em>" . ( $this->isSetOption('label') ? __($this->getOption('label')) : $field ) . "</em>" )), $field, "regex");
+                    return FALSE;
+                }
+            break;
             case 'repeat':
                 $repeat = $this->getOption('match');
                 if ($value !== $model->$repeat)
@@ -37,19 +45,19 @@ class Valid extends \Phalcon\Mvc\Model\Validator
                     return FALSE;
                 }
             break;
+            case 'unique':
+                $filtered = $model::findFirst(array($field.'=:field:', 'bind' => array('field' => $value)));
+                if ($filtered && $value !== '')
+                {
+                    $this->appendMessage($this->isSetOption('message') ? $this->getOption('message') : __("Field :field must be unique", array(':field' => "<em>" . ( $this->isSetOption('label') ? __($this->getOption('label')) : $field ) . "</em>" )), $field, "unique");
+                    return FALSE;
+                }
+            break;
             case 'url':
                 $filtered = filter_var($value, FILTER_VALIDATE_URL);
                 if ( ! $filtered && $value !== '')
                 {
                     $this->appendMessage($this->isSetOption('message') ? $this->getOption('message') : __("Field :field must be a url", array(':field' => "<em>" . ( $this->isSetOption('label') ? __($this->getOption('label')) : $field ) . "</em>" )), $field, "url");
-                    return FALSE;
-                }
-            break;
-            case 'regex':
-                $filtered = preg_match($this->getOption('regex'), (string) $value);
-                if ( ! $filtered && $value !== '')
-                {
-                    $this->appendMessage($this->isSetOption('message') ? $this->getOption('message') : __("Field :field does not match the required format", array(':field' => "<em>" . ( $this->isSetOption('label') ? __($this->getOption('label')) : $field ) . "</em>" )), $field, "regex");
                     return FALSE;
                 }
             break;
