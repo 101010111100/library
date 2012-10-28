@@ -2,8 +2,6 @@
 
 class Valid extends \Phalcon\Mvc\Model\Validator
 {
-    public $data = array();
-    
     public function validate($model)
     {
         $field = $this->getOption('field');
@@ -47,8 +45,21 @@ class Valid extends \Phalcon\Mvc\Model\Validator
                     return FALSE;
                 }
             break;
+            case 'regex':
+                $filtered = preg_match($this->getOption('regex'), (string) $value);
+                if ( ! $filtered && $value !== '')
+                {
+                    $this->appendMessage($this->isSetOption('message') ? $this->getOption('message') : __("Field :field does not match the required format", array(':field' => "<em>" . ( $this->isSetOption('label') ? __($this->getOption('label')) : $field ) . "</em>" )), $field, "regex");
+                    return FALSE;
+                }
+            break;
             default:
-                return FALSE;
+                $filtered = in_array($value, array(NULL, FALSE, '', array()), TRUE);
+                if ( ! $filtered)
+                {
+                    $this->appendMessage($this->isSetOption('message') ? $this->getOption('message') : __("Field :field must not be empty", array(':field' => "<em>" . ( $this->isSetOption('label') ? __($this->getOption('label')) : $field ) . "</em>" )), $field, "regex");
+                    return FALSE;
+                }
             break;
         }
         return TRUE;
