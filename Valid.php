@@ -2,7 +2,7 @@
 
 class Valid extends \Phalcon\Mvc\Model\Validator
 {
-    public function validate($model)
+    public function validate($model = NULL)
     {
         $field = $this->getOption('field');
         $value = $this->isSetOption('value') ? $this->getOption('value') : $model->$field;
@@ -58,12 +58,12 @@ class Valid extends \Phalcon\Mvc\Model\Validator
                 }
             break;
             case 'length':
-                if (strlen($value) < $this->getOption('min'))
+                if ($this->isSetOption('min') && strlen($value) < $this->getOption('min'))
                 {
                     $this->appendMessage($this->isSetOption('message') ? $this->getOption('message') : __("Field :field must be at least :min characters long", array(':field' => "<em>" . ( $this->isSetOption('label') ? __($this->getOption('label')) : $field ) . "</em>", ':min' => "<em>" . $this->getOption('min') . "</em>" )), $field, "length");
                     return FALSE;
                 }
-                if (strlen($value) > $this->getOption('max'))
+                if ($this->isSetOption('max') && strlen($value) > $this->getOption('max'))
                 {
                     $this->appendMessage($this->isSetOption('message') ? $this->getOption('message') : __("Field :field must not exceed :max characters long", array(':field' => "<em>" . ( $this->isSetOption('label') ? __($this->getOption('label')) : $field ) . "</em>", ':max' => "<em>" . $this->getOption('max') . "</em>" )), $field, "length");
                     return FALSE;
