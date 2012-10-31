@@ -4,6 +4,7 @@ class I18n {
     
     public static $lang = 'en-us';
     public static $source = 'en-us';
+    private static $dir = '../app/messages/';
     protected static $_cache = array();
     
     public static function lang($lang = NULL)
@@ -23,35 +24,32 @@ class I18n {
         {
             return I18n::$_cache[$lang];
         }
-        
-        $messages = array();
-        $langPath = '../app/messages/';
+
         $parts = explode('-', $lang);
         $path = implode(DIRECTORY_SEPARATOR, $parts);
         
         if ($lang != I18n::$source)
         {
-            if (file_exists($langPath.$path.'.php'))
+            if (file_exists(I18n::$dir.$path.'.php'))
             {
-                $messages = require $langPath.$path.'.php';
+                $messages = require I18n::$dir.$path.'.php';
             }
-            elseif (file_exists($langPath.$lang.'.php'))
+            elseif (file_exists(I18n::$dir.$lang.'.php'))
             {
-                $messages = require $langPath.$lang.'.php';
+                $messages = require I18n::$dir.$lang.'.php';
             }
-            elseif (file_exists($langPath.$parts[0].'.php'))
+            elseif (file_exists(I18n::$dir.$parts[0].'.php'))
             {
-                $messages = require $langPath.$parts[0].'.php';
+                $messages = require I18n::$dir.$parts[0].'.php';
             }
         }
 
         $translate = new Phalcon\Translate\Adapter\NativeArray(array(
-            "content" => $messages
+            "content" => isset($messages) ? $messages : array()
         ));
         
         return I18n::$_cache[$lang] = $translate;
     }
-    
 }
 
 if ( ! function_exists('__'))
