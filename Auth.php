@@ -65,6 +65,7 @@ abstract class Auth
                 if (Arr::get($roles, 'login') && $token->user_agent === sha1($this->request->getUserAgent()))
                 {
                     // Save the token to create a new unique token
+                    $token->token = Auth::create_token();
                     $token->save();
 
                     // Set the new token
@@ -79,7 +80,7 @@ abstract class Auth
                     $this->session->set(Auth::$_config['session_key'], $user);
 
                     // Automatic login was successful
-                    return $token->user;
+                    return $user;
                 }
 
                 // Token is invalid
