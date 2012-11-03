@@ -54,7 +54,7 @@ abstract class Auth
         {
             // Load the token and user
             $token = Tokens::findFirst(array('token=:token:', 'bind' => array('token' => $token)));
-            $user = $token->getUsers()->getFirst();
+            $user = $token->getUsers();
             
             // If the token and user exists
             if ($token && $user)
