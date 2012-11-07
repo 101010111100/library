@@ -2,7 +2,7 @@
 
 abstract class Debug
 {
-    private static $style = array(
+    public static $style = array(
         'pre' => array(
             'background-color'  =>   '#f1f1f1',
             'font-size'         =>   '11px',
@@ -91,9 +91,9 @@ abstract class Debug
     {
         $vars = func_get_args();
         $out = '';
-        foreach ($vars as $name => $value)
+        foreach ($vars as $index => $value)
         {
-            $out .= self::dump($value);
+            $out .= self::dump($value, 'var '.($index+1));
         }
         return $out;
     }
@@ -107,16 +107,17 @@ abstract class Debug
      */
     public static function dump ($var, $name = '')
     {
-        $style = self::get_style(self::$style);
-        return '<pre style="' . $style['pre'] . '">::Debug<hr style="margin-top:5px; border:0; border-bottom: 1px solid #ccc;" />' . ($name != '' ? "$name : " : '') . self::_get_info_var ($var, $name) . '</pre>';
+        $style = Debug::get_style(self::$style);
+        return '<pre style="' . $style['pre'] . '">' . ($name != '' ? "$name : " : '') . Debug::_get_info_var ($var, $name) . '</pre>';
     }
     
-    function get ($var, $name = '')
-    {
-        return ($name != '' ? "$name : " : '') . self::_get_info_var ($var, $name);
-    }
-    
-    function get_style(array $styles)
+    /**
+     * Prepare array of styles from style atribute.
+     *
+     * @param   array    array of styles
+     * @return  array
+     */
+    private function get_style(array $styles)
     {
         $arr = array();
         foreach ($styles as $type => $style)
@@ -132,7 +133,14 @@ abstract class Debug
         return $arr;
     }
     
-    function _get_info_var ($var, $name = '', $indent = 0)
+    /**
+     * Prepare an HTML string of information about a single variable.
+     *
+     * @param   mixed    variable to dump
+     * @param   string   name of variable
+     * @return  string
+     */
+    private function _get_info_var ($var, $name = '', $indent = 0)
     {
         static $methods = array ();
         $indent > 0 or $methods = array ();
