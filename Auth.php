@@ -4,24 +4,38 @@ abstract class Auth
 {
     private static $_config = array(
         'hash_method'   =>  'sha256',
-        'hash_key'      =>  '2fea1f3e86b30468e9a74498b65c795201e9d56a73f7646b48660f3896883427',
+        'hash_key'      => 'Shared secret key',
         'lifetime'      =>  1209600,
         'session_key'   =>  'auth_user',
         'session_roles' =>  TRUE,
     );
-    
-    /**
-     * Perform a hmac hash, using the configured method.
-     *
-     * @param   string  string to hash
-     * @return  string
-     */
-    public function hash($str)
-    {
-        if ( ! Auth::$_config['hash_key'])
-            throw new \Phalcon\Exception('A valid hash key must be set in your auth config.');
 
-        return hash_hmac(Auth::$_config['hash_method'], $str, Auth::$_config['hash_key']);
+    /**
+     * Checks if a session is active.
+     *
+     * @param   mixed    $role Role name string
+     * @return  boolean
+     */
+    public function logged_in($role = NULL)
+    {
+        // Get the user from the session
+        $user = Auth::get_user();
+        if ( ! $user)
+                return FALSE;
+        
+        //if user exists in session
+        if ($user)
+        {
+            // If we don't have a roll no further checking is needed
+            if ( ! $role)
+                return TRUE;
+
+            // Get role
+            $role = Auth::$_config['session_roles'] ? $user->roles->$role : Roles::findFirst(array('user_id=:user_id: AND name=:role:', 'bind' => array('user_id' => $user->id, 'role' => $role)));
+
+            // Return true if user has role
+            return $role ? TRUE : FALSE;
+        }
     }
     
     /**
@@ -72,6 +86,12 @@ abstract class Auth
                     Cookie::set('authautologin', $token->token, $token->expires - time());
                     
                     // Finish the login
+                    $this->db->update('users',
+                        array('logins', 'last_login'),
+                        array($user->logins+1, date('Y-m-d H:i:s')),
+                        strtr('id = :id', array(':id' => $user->id))
+                    );
+                    
                     // Regenerate session_id
                     session_regenerate_id();
 
@@ -89,48 +109,6 @@ abstract class Auth
         }
 
         return FALSE;
-    }
-    
-    protected function create_token()
-    {
-        do
-        {
-            $token = sha1(uniqid(Auth::random_text(32), TRUE));
-        }
-        while(Tokens::findFirst(array('token=:token:', 'bind' => array('token' => $token)) ));
-
-        return $token;
-    }
-    
-    /**
-     * Generate random text
-     * 
-     * @param   intiger     $length    text length
-     * @return  string
-     */
-    public static function random_text($length = 8)
-    {
-        $text = "";
-        $possible = "2346789bcdfghjkmnpqrtvwxyzBCDFGHJKLMNPQRTVWXYZ";
-        $maxlength = strlen($possible);
-
-        if ($length > $maxlength)
-        {
-            $length = $maxlength;
-        }
-
-        $i = 0;
-        while ($i < $length)
-        {
-            $char = substr($possible, mt_rand(0, $maxlength-1), 1);
-            if (!strstr($text, $char))
-            {
-                $text .= $char;
-                $i++;
-            }
-        }
-        
-        return $text;
     }
     
     /**
@@ -177,6 +155,12 @@ abstract class Auth
             }
 
             // Finish the login
+            $this->db->update('users',
+                array('logins', 'last_login'),
+                array($user->logins+1, date('Y-m-d H:i:s')),
+                strtr('id = :id', array(':id' => $user->id))
+            );
+            
             // Regenerate session_id
             session_regenerate_id();
 
@@ -240,32 +224,65 @@ abstract class Auth
         // Double check
         return ! Auth::logged_in();
     }
-
+    
     /**
-     * Checks if a session is active.
+     * Perform a hmac hash, using the configured method.
      *
-     * @param   mixed    $role Role name string
-     * @return  boolean
+     * @param   string  string to hash
+     * @return  string
      */
-    public function logged_in($role = NULL)
+    public static function hash($str)
     {
-        // Get the user from the session
-        $user = Auth::get_user();
-        if ( ! $user)
-                return FALSE;
-        
-        //if user exists in session
-        if ($user)
+        if ( ! Auth::$_config['hash_key'])
+            throw new \Phalcon\Exception('A valid hash key must be set in your auth config.');
+
+        return hash_hmac(Auth::$_config['hash_method'], $str, Auth::$_config['hash_key']);
+    }
+    
+    /**
+     * Create auto login token.
+     *
+     * @return  string
+     */
+    protected function create_token()
+    {
+        do
         {
-            // If we don't have a roll no further checking is needed
-            if ( ! $role)
-                return TRUE;
-
-            // Get role
-            $role = Auth::$_config['session_roles'] ? $user->roles->$role : Roles::findFirst(array('user_id=:user_id: AND name=:role:', 'bind' => array('user_id' => $user->id, 'role' => $role)));
-
-            // Return true if user has role
-            return $role ? TRUE : FALSE;
+            $token = sha1(uniqid(Auth::random_text(32), TRUE));
         }
+        while(Tokens::findFirst(array('token=:token:', 'bind' => array('token' => $token)) ));
+
+        return $token;
+    }
+    
+    /**
+     * Generate random text
+     * 
+     * @param   intiger     $length    text length
+     * @return  string
+     */
+    public static function random_text($length = 8)
+    {
+        $text = "";
+        $possible = "2346789bcdfghjkmnpqrtvwxyzBCDFGHJKLMNPQRTVWXYZ";
+        $maxlength = strlen($possible);
+
+        if ($length > $maxlength)
+        {
+            $length = $maxlength;
+        }
+
+        $i = 0;
+        while ($i < $length)
+        {
+            $char = substr($possible, mt_rand(0, $maxlength-1), 1);
+            if (!strstr($text, $char))
+            {
+                $text .= $char;
+                $i++;
+            }
+        }
+        
+        return $text;
     }
 }
