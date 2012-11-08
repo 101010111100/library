@@ -1,14 +1,39 @@
 <?php
 
-abstract class Auth
+class Auth
 {
-    private static $_config = array(
+    private $_config = array(
         'hash_method'   =>  'sha256',
         'hash_key'      => 'Shared secret key',
         'lifetime'      =>  1209600,
         'session_key'   =>  'auth_user',
         'session_roles' =>  TRUE,
     );
+    
+    private static $_instance;
+    private $_session;
+    
+    /**
+     * Singleton pattern
+     *
+     * @return Auth
+     */
+    public static function instance()
+    {
+        if( empty(self::$_instance) )
+        {
+            self::$_instance = new Auth;
+        }
+
+        return self::$_instance;
+    }
+    
+    private function __construct()
+    {
+        $this->_session = \Phalcon\DI::getDefault()->getShared('session');
+    }
+    
+    private function __clone(){}
 
     /**
      * Checks if a session is active.
@@ -19,7 +44,7 @@ abstract class Auth
     public function logged_in($role = NULL)
     {
         // Get the user from the session
-        $user = Auth::get_user();
+        $user = $this->get_user();
         if ( ! $user)
                 return FALSE;
         
@@ -31,7 +56,7 @@ abstract class Auth
                 return TRUE;
 
             // Get role
-            $role = Auth::$_config['session_roles'] ? $user->roles->$role : Roles::findFirst(array('user_id=:user_id: AND name=:role:', 'bind' => array('user_id' => $user->id, 'role' => $role)));
+            $role = $this->_config['session_roles'] ? $user->roles->$role : Roles::findFirst(array('user_id=:user_id: AND name=:role:', 'bind' => array('user_id' => $user->id, 'role' => $role)));
 
             // Return true if user has role
             return $role ? TRUE : FALSE;
@@ -46,12 +71,12 @@ abstract class Auth
      */
     public function get_user()
     {
-        $user = $this->session->get(Auth::$_config['session_key']);
-
+        $user = $this->_session->get($this->_config['session_key']);
+        
         if ( ! $user)
         {
             // check for "remembered" login
-            $user = Auth::auto_login();
+            $user = $this->auto_login();
         }
 
         return $user;
@@ -76,17 +101,17 @@ abstract class Auth
                 $roles = Arr::from_model($user->getRoles(), 'name', 'id');
                 
                 //If user has login role and tokens match, perform a login
-                if (Arr::get($roles, 'login') && $token->user_agent === sha1($this->request->getUserAgent()))
+                if (Arr::get($roles, 'login') && $token->user_agent === sha1(\Phalcon\DI::getDefault()->getShared('request')->getUserAgent()))
                 {
                     // Save the token to create a new unique token
-                    $token->token = Auth::create_token();
+                    $token->token = $this->create_token();
                     $token->save();
 
                     // Set the new token
                     Cookie::set('authautologin', $token->token, $token->expires - time());
                     
                     // Finish the login
-                    $this->db->update('users',
+                    \Phalcon\DI::getDefault()->getShared('db')->update('users',
                         array('logins', 'last_login'),
                         array($user->logins+1, date('Y-m-d H:i:s')),
                         strtr('id = :id', array(':id' => $user->id))
@@ -97,7 +122,7 @@ abstract class Auth
 
                     // Store user in session
                     $user = Arr::to_object(Arr::merge(get_object_vars($user), array('roles' => $roles)));
-                    $this->session->set(Auth::$_config['session_key'], $user);
+                    $this->_session->set($this->_config['session_key'], $user);
 
                     // Automatic login was successful
                     return $user;
@@ -131,9 +156,9 @@ abstract class Auth
         if (is_string($password))
         {
             // Create a hashed password
-            $password = Auth::hash($password);
+            $password = $this->hash($password);
         }
-
+        
         $roles = Arr::from_model($user->getRoles(), 'name', 'id');
 
         // If the passwords match, perform a login
@@ -144,18 +169,18 @@ abstract class Auth
                 // Create a new autologin token
                 $token = new Tokens();
                 $token->user_id = $user->id;
-                $token->user_agent = sha1($this->request->getUserAgent());
-                $token->token = Auth::create_token();
+                $token->user_agent = sha1(\Phalcon\DI::getDefault()->getShared('request')->getUserAgent());
+                $token->token = $this->create_token();
                 $token->created = time();
-                $token->expires = time() + Auth::$_config['lifetime'];
+                $token->expires = time() + $this->_config['lifetime'];
                 $token->create();
                 
                 // Set the autologin cookie
-                Cookie::set('authautologin', $token->token, Auth::$_config['lifetime']);
+                Cookie::set('authautologin', $token->token, $this->_config['lifetime']);
             }
 
             // Finish the login
-            $this->db->update('users',
+            \Phalcon\DI::getDefault()->getShared('db')->update('users',
                 array('logins', 'last_login'),
                 array($user->logins+1, date('Y-m-d H:i:s')),
                 strtr('id = :id', array(':id' => $user->id))
@@ -166,7 +191,7 @@ abstract class Auth
 
             // Store user in session
             $user = Arr::to_object(Arr::merge(get_object_vars($user), array('roles' => $roles)));
-            $this->session->set(Auth::$_config['session_key'], $user);
+            $this->_session->set($this->_config['session_key'], $user);
             
             return TRUE;
         }
@@ -210,19 +235,19 @@ abstract class Auth
         if ($destroy === TRUE)
         {
             // Destroy the session completely
-            $this->session->destroy();
+            $this->_session->destroy();
         }
         else
         {
             // Remove the user from the session
-            $this->session->remove(Auth::$_config['session_key']);
+            $this->_session->remove($this->_config['session_key']);
 
             // Regenerate session_id
             session_regenerate_id();
         }
 
         // Double check
-        return ! Auth::logged_in();
+        return ! $this->logged_in();
     }
     
     /**
@@ -231,12 +256,12 @@ abstract class Auth
      * @param   string  string to hash
      * @return  string
      */
-    public static function hash($str)
+    public function hash($str)
     {
-        if ( ! Auth::$_config['hash_key'])
+        if ( !$this->_config['hash_key'])
             throw new \Phalcon\Exception('A valid hash key must be set in your auth config.');
 
-        return hash_hmac(Auth::$_config['hash_method'], $str, Auth::$_config['hash_key']);
+        return hash_hmac($this->_config['hash_method'], $str, $this->_config['hash_key']);
     }
     
     /**
@@ -248,7 +273,7 @@ abstract class Auth
     {
         do
         {
-            $token = sha1(uniqid(Auth::random_text(32), TRUE));
+            $token = sha1(uniqid($this->random_text(32), TRUE));
         }
         while(Tokens::findFirst(array('token=:token:', 'bind' => array('token' => $token)) ));
 
@@ -261,7 +286,7 @@ abstract class Auth
      * @param   intiger     $length    text length
      * @return  string
      */
-    public static function random_text($length = 8)
+    public function random_text($length = 8)
     {
         $text = "";
         $possible = "2346789bcdfghjkmnpqrtvwxyzBCDFGHJKLMNPQRTVWXYZ";
