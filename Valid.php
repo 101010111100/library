@@ -53,7 +53,7 @@ class Valid extends \Phalcon\Mvc\Model\Validator
                 try
                 {
                     // Get the width and height from the uploaded image
-                    list($tmp_width, $tmp_height) = getimagesize($_FILES[$field]['tmp_name']);
+                    list($tmp_width, $tmp_height) = getimagesize($value['tmp_name']);
                 }
                 catch (Exception $e){}
 
@@ -94,19 +94,19 @@ class Valid extends \Phalcon\Mvc\Model\Validator
                 }
             break;
             case 'file_not_empty':
-                $filtered = isset($_FILES[$field]['error']) AND isset($_FILES[$field]['tmp_name']) AND $_FILES[$field]['error'] === UPLOAD_ERR_OK AND is_uploaded_file($_FILES[$field]['tmp_name']) ? TRUE : FALSE ;
-                if ( ! $filtered)
+                $filtered = isset($value['error']) AND isset($value['tmp_name']) AND $value['error'] === UPLOAD_ERR_OK AND is_uploaded_file($value['tmp_name']) ? TRUE : FALSE;
+                if ($filtered)
                 {
                     $this->appendMessage($this->isSetOption('message') ? $this->getOption('message') : __("File :field must not be empty", array(':field' => "<em>" . ( $this->isSetOption('label') ? __($this->getOption('label')) : $field ) . "</em>" )), $field, "file_not_empty");
                     return FALSE;
                 }
             break;
             case 'file_size':
-                if ($_FILES[$field]['error'] === UPLOAD_ERR_INI_SIZE)
+                if ($value['error'] === UPLOAD_ERR_INI_SIZE)
                     // Upload is larger than PHP allowed size (upload_max_filesize)
                     return FALSE;
                 
-                if ($_FILES[$field]['error'] !== UPLOAD_ERR_OK)
+                if ($value['error'] !== UPLOAD_ERR_OK)
                     // The upload failed, no size to check
                     return TRUE;
                 
@@ -116,17 +116,17 @@ class Valid extends \Phalcon\Mvc\Model\Validator
                 preg_match('/^([0-9]+(?:\.[0-9]+)?)('.implode('|', array_keys($byte_units)).')?$/Di', $max, $matches);
                 $bytes = (float) $matches[1] * pow(2, $byte_units[Arr::get($matches, 2, 'B')]);
                 
-                if ( ! $_FILES[$field]['size'] <= $bytes)
+                if ( ! $value['size'] <= $bytes)
                 {
                     $this->appendMessage($this->isSetOption('message') ? $this->getOption('message') : __("Max size of file :field is :max", array(':field' => "<em>" . ( $this->isSetOption('label') ? __($this->getOption('label')) : $field ) . "</em>" , ':max' => '<em>'.$max.'</em>')), $field, "file_size");
                     return FALSE;
                 }
             break;
             case 'file_type':
-                if ($_FILES[$field]['error'] !== UPLOAD_ERR_OK)
+                if ($value['error'] !== UPLOAD_ERR_OK)
                     return TRUE;
                 
-                $ext = strtolower(pathinfo($_FILES[$field]['name'], PATHINFO_EXTENSION));
+                $ext = strtolower(pathinfo($value['name'], PATHINFO_EXTENSION));
                 $filtered = in_array($ext, $this->getOption('allowed'));
                 if ( ! $filtered)
                 {
@@ -135,7 +135,7 @@ class Valid extends \Phalcon\Mvc\Model\Validator
                 }
             break;
             case 'file_valid':
-                $filtered = isset($_FILES[$field]['error']) AND isset($_FILES[$field]['name']) AND isset($_FILES[$field]['type']) AND isset($_FILES[$field]['tmp_name']) AND isset($_FILES[$field]['size']) ? TRUE : FALSE ;
+                $filtered = isset($value['error']) AND isset($value['name']) AND isset($value['type']) AND isset($value['tmp_name']) AND isset($value['size']) ? TRUE : FALSE ;
                 if ( ! $filtered)
                 {
                     $this->appendMessage($this->isSetOption('message') ? $this->getOption('message') : __("File :field is not valid", array(':field' => "<em>" . ( $this->isSetOption('label') ? __($this->getOption('label')) : $field ) . "</em>" )), $field, "file_valid");
@@ -211,5 +211,18 @@ class Valid extends \Phalcon\Mvc\Model\Validator
             break;
         }
         return TRUE;
+    }
+    
+    public function getMessages()
+    {
+        $messages = array();
+        foreach (parent::getMessages() as $message)
+        {
+            if ( ! Arr::get($messages, $message->getField()))
+            {
+                $messages[$message->getField()] = $message->getMessage();
+            }         
+        }
+        return $messages;
     }
 }
