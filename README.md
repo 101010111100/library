@@ -5,4 +5,5 @@ Phalcon PHP library
 
 Examples:
 ***
-1. [Valid](https://github.com/mruz/library/wiki/Valid)
+* [Lang](https://github.com/mruz/library/wiki/Lang)
+* [Valid](https://github.com/mruz/library/wiki/Valid)
