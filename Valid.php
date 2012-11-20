@@ -59,7 +59,7 @@ class Valid extends \Phalcon\Mvc\Model\Validator
 
                 if (empty($tmp_width) OR empty($tmp_height))
                     // Cannot get image size, cannot validate
-                    return FALSE;
+                    return TRUE;
                 
                 // No limit, use the image width
                 $min_width = $this->isSetOption('min_width') ? $this->getOption('min_width') : 1;
@@ -67,7 +67,7 @@ class Valid extends \Phalcon\Mvc\Model\Validator
 
                 // No limit, use the image height
                 $min_height = $this->isSetOption('min_height') ? $this->getOption('min_height') : 1;
-                $max_height = $this->isSetOption('max_height') ? $this->getOption('max_height') : $tmp_width;
+                $max_height = $this->isSetOption('max_height') ? $this->getOption('max_height') : $tmp_height;
 
                 
                 if ($this->getOption('exactly'))
@@ -78,24 +78,24 @@ class Valid extends \Phalcon\Mvc\Model\Validator
                 else
                 {
                     // Check if size is within minimum and maximum dimensions
-                    $filtered = ($tmp_width >= $min_width AND $tmp_height >= $min_height AND $tmp_width <= $max_width AND $tmp_height <= $max_height) ? TRUE : FALSE;
+                    $filtered = ($tmp_width >= $min_width && $tmp_height >= $min_height && $tmp_width <= $max_width && $tmp_height <= $max_height ? TRUE : FALSE);
                 }
-                
+
                 if ( ! $filtered)
                 {
                     $min = ($this->isSetOption('min_width') ? $this->getOption('min_width') : __('ANY')).'x'.($this->isSetOption('min_height') ? $this->getOption('min_height') : __('ANY')).'px';
                     $max = ($this->isSetOption('max_width') ? $this->getOption('max_width') : __('ANY')).'x'.($this->isSetOption('max_height') ? $this->getOption('max_height') : __('ANY')).'px';
                     
                     if ($this->getOption('exactly'))
-                        $this->appendMessage($this->isSetOption('message') ? $this->getOption('message') : __("Resolution of file :field must be exactly :resolution", array(':field' => "<em>" . ( $this->isSetOption('label') ? __($this->getOption('label')) : $field ) . "</em>", ':resolution' => '<em>'.$max.'</em>' )), $field, "file_image");
+                        $this->appendMessage($this->isSetOption('message') ? $this->getOption('message') : __("Resolution of :field must be exactly,:resolution", array(':field' => "<em>" . ( $this->isSetOption('label') ? __($this->getOption('label')) : $field ) . "</em>", ':resolution' => '<em>'.$max.'</em>' )), $field, "file_image");
                     else
-                        $this->appendMessage($this->isSetOption('message') ? $this->getOption('message') : __("Resolution of file :field is not valid,:resolution", array(':field' => "<em>" . ( $this->isSetOption('label') ? __($this->getOption('label')) : $field ) . "</em>", ':resolution' => (($this->isSetOption('min_width') || $this->isSetOption('min_height')) ? ' min:<em>'.$min.'</em>' : '').(($this->isSetOption('max_width') || $this->isSetOption('max_height')) ? ' max:<em>'.$max.'</em>' : '') )), $field, "file_image");
+                        $this->appendMessage($this->isSetOption('message') ? $this->getOption('message') : __("Resolution of :field is not valid,:resolution", array(':field' => "<em>" . ( $this->isSetOption('label') ? __($this->getOption('label')) : $field ) . "</em>", ':resolution' => (($this->isSetOption('min_width') || $this->isSetOption('min_height')) ? ' min:<em>'.$min.'</em>' : '').(($this->isSetOption('max_width') || $this->isSetOption('max_height')) ? ' max:<em>'.$max.'</em>' : '') )), $field, "file_image");
                     return FALSE;
                 }
             break;
             case 'file_not_empty':
-                $filtered = isset($value['error']) AND isset($value['tmp_name']) AND $value['error'] === UPLOAD_ERR_OK AND is_uploaded_file($value['tmp_name']) ? TRUE : FALSE;
-                if ($filtered)
+                $filtered = (isset($value['error']) AND isset($value['tmp_name']) AND $value['error'] === UPLOAD_ERR_OK AND is_uploaded_file($value['tmp_name']) ? TRUE : FALSE);
+                if ( ! $filtered)
                 {
                     $this->appendMessage($this->isSetOption('message') ? $this->getOption('message') : __("File :field must not be empty", array(':field' => "<em>" . ( $this->isSetOption('label') ? __($this->getOption('label')) : $field ) . "</em>" )), $field, "file_not_empty");
                     return FALSE;
@@ -116,9 +116,10 @@ class Valid extends \Phalcon\Mvc\Model\Validator
                 preg_match('/^([0-9]+(?:\.[0-9]+)?)('.implode('|', array_keys($byte_units)).')?$/Di', $max, $matches);
                 $bytes = (float) $matches[1] * pow(2, $byte_units[Arr::get($matches, 2, 'B')]);
                 
-                if ( ! $value['size'] <= $bytes)
+                $filtered = ($value['size'] <= $bytes ? TRUE : FALSE);
+                if ( ! $filtered)
                 {
-                    $this->appendMessage($this->isSetOption('message') ? $this->getOption('message') : __("Max size of file :field is :max", array(':field' => "<em>" . ( $this->isSetOption('label') ? __($this->getOption('label')) : $field ) . "</em>" , ':max' => '<em>'.$max.'</em>')), $field, "file_size");
+                    $this->appendMessage($this->isSetOption('message') ? $this->getOption('message') : __("Max size of :field is :max", array(':field' => "<em>" . ( $this->isSetOption('label') ? __($this->getOption('label')) : $field ) . "</em>" , ':max' => '<em>'.$max.'</em>')), $field, "file_size");
                     return FALSE;
                 }
             break;
@@ -130,12 +131,12 @@ class Valid extends \Phalcon\Mvc\Model\Validator
                 $filtered = in_array($ext, $this->getOption('allowed'));
                 if ( ! $filtered)
                 {
-                    $this->appendMessage($this->isSetOption('message') ? $this->getOption('message') : __("Type of file :field is not valid", array(':field' => "<em>" . ( $this->isSetOption('label') ? __($this->getOption('label')) : $field ) . "</em>" )), $field, "file_type");
+                    $this->appendMessage($this->isSetOption('message') ? $this->getOption('message') : __("Type of :field is not valid", array(':field' => "<em>" . ( $this->isSetOption('label') ? __($this->getOption('label')) : $field ) . "</em>" )), $field, "file_type");
                     return FALSE;
                 }
             break;
             case 'file_valid':
-                $filtered = isset($value['error']) AND isset($value['name']) AND isset($value['type']) AND isset($value['tmp_name']) AND isset($value['size']) ? TRUE : FALSE ;
+                $filtered = (isset($value['error']) AND isset($value['name']) AND isset($value['type']) AND isset($value['tmp_name']) AND isset($value['size']) ? TRUE : FALSE);
                 if ( ! $filtered)
                 {
                     $this->appendMessage($this->isSetOption('message') ? $this->getOption('message') : __("File :field is not valid", array(':field' => "<em>" . ( $this->isSetOption('label') ? __($this->getOption('label')) : $field ) . "</em>" )), $field, "file_valid");
@@ -221,8 +222,23 @@ class Valid extends \Phalcon\Mvc\Model\Validator
             if ( ! Arr::get($messages, $message->getField()))
             {
                 $messages[$message->getField()] = $message->getMessage();
-            }         
+            }
         }
         return $messages;
+    }
+    
+    public function rules()
+    {
+        $valid = TRUE;
+        $messages = array();
+        foreach (func_get_args() as $validator)
+        {
+            if( ! $validator->validate())
+            {
+                $valid = FALSE;
+                $messages = Arr::merge($validator->getMessages(), $messages);
+            }
+        }
+        return $valid ? $valid : $messages;
     }
 }
