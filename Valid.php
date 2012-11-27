@@ -143,6 +143,14 @@ class Valid extends \Phalcon\Mvc\Model\Validator
                     return FALSE;
                 }
             break;
+            case 'in_array':
+                $filtered = in_array($value, $this->getOption('allowed'));
+                if ( ! $filtered)
+                {
+                    $this->appendMessage($this->isSetOption('message') ? $this->getOption('message') : __(":field must be one of :allowed", array(':field' => "<em>" . ( $this->isSetOption('label') ? __($this->getOption('label')) : $field ) . "</em>", ':allowed' => implode(', ', $this->getOption('allowed')) )), $field, "ip");
+                    return FALSE;
+                }
+            break;
             case 'ip':
                 $filtered = filter_var($value, FILTER_VALIDATE_IP);
                 if ( ! $filtered && $value !== '')
@@ -160,6 +168,13 @@ class Valid extends \Phalcon\Mvc\Model\Validator
                 if ($this->isSetOption('max') && strlen($value) > $this->getOption('max'))
                 {
                     $this->appendMessage($this->isSetOption('message') ? $this->getOption('message') : __("Field :field must not exceed :max characters long", array(':field' => "<em>" . ( $this->isSetOption('label') ? __($this->getOption('label')) : $field ) . "</em>", ':max' => "<em>" . $this->getOption('max') . "</em>" )), $field, "length");
+                    return FALSE;
+                }
+            break;
+            case 'min':
+                if ($value < $this->getOption('min'))
+                {
+                    $this->appendMessage($this->isSetOption('message') ? $this->getOption('message') : __("Minimum value of the :field is :min", array(':field' => "<em>" . ( $this->isSetOption('label') ? __($this->getOption('label')) : $field ) . "</em>", ':min' => "<em>" . $this->getOption('min') . "</em>")), $field, "range");
                     return FALSE;
                 }
             break;
