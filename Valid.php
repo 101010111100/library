@@ -6,7 +6,8 @@ class Valid extends \Phalcon\Mvc\Model\Validator
     {
         $field = $this->getOption('field');
         $value = $this->isSetOption('value') ? $this->getOption('value') : $model->$field;
-
+        $Model = $this->isSetOption('model') ? $this->getOption('model') : $model;
+        
         switch ($this->getOption('type'))
         {
             case 'alpha':
@@ -195,14 +196,14 @@ class Valid extends \Phalcon\Mvc\Model\Validator
             break;
             case 'repeat':
                 $repeat = $this->getOption('match');
-                if ($value !== $model->$repeat)
+                if ($value !== $repeat)
                 {
                     $this->appendMessage($this->isSetOption('message') ? $this->getOption('message') : __("Field :field must be the same as :repeat", array(':field' => "<em>" . ( $this->isSetOption('label') ? __($this->getOption('label')) : $field ) . "</em>", ':repeat' => "<em>" . ( $this->getOption('match_label') ? __($this->getOption('match_label')) : $repeat ) . "</em>" )), $field, "repeat");
                     return FALSE;
                 }
             break;
             case 'unique':
-                $filtered = $model::findFirst(array($field.'=:field:', 'bind' => array('field' => $value)));
+                $filtered = $Model::findFirst(array($field.'=:field:', 'bind' => array('field' => $value)));
                 if ($filtered && $value !== '')
                 {
                     $this->appendMessage($this->isSetOption('message') ? $this->getOption('message') : __("Field :field must be unique", array(':field' => "<em>" . ( $this->isSetOption('label') ? __($this->getOption('label')) : $field ) . "</em>" )), $field, "unique");
