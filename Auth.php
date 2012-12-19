@@ -83,6 +83,36 @@ class Auth
     }
     
     /**
+     * Refresh user data stored in the session from the database.
+     * Returns NULL if no user is currently logged in.
+     *
+     * @return  mixed
+     */
+    public function refresh_user()
+    {
+        $user = $this->_session->get($this->_config['session_key']);
+        
+        if ( ! $user)
+        {
+            return NULL;
+        }
+        else
+        {
+            $user = Users::findFirst($user->id);
+            $roles = Arr::from_model($user->getRoles(), 'name', 'id');
+            
+            // Regenerate session_id
+            session_regenerate_id();
+
+            // Store user in session
+            $user = Arr::to_object(Arr::merge(get_object_vars($user), array('roles' => $roles)));
+            $this->_session->set($this->_config['session_key'], $user);
+            
+            return $user;
+        }
+    }
+    
+    /**
      * Logs a user in, based on the authautologin cookie.
      *
      * @return  mixed
