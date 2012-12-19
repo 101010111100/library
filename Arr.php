@@ -262,14 +262,15 @@ abstract class Arr {
      * @param   array   $array      array to extract from
      * @param   string  $key        key name
      * @param   mixed   $default    default value
+     * @param   mixed   $empty      empty value
      * @return  mixed
      */
-    public static function get($array, $key, $default = NULL)
+    public static function get($array, $key, $default = NULL, $empty = '')
     {
         if (array_key_exists($key, $array)
             OR ($array instanceof ArrayAccess AND $array->offsetExists($key)))
         {
-            return $array[$key];
+            return $array[$key] == '' ? $empty : $array[$key];
         }
         else
         {
