@@ -1,8 +1,7 @@
 <?php 
-class Email {
+class Email extends Email_PHPMailer {
     
-    public static $_driver = 'PHPMailer';
-    private static $_config  = array(
+    private $_config  = array(
         'CharSet'       =>  'utf-8',
         'ContentType'   =>  'text/html',
         'Encoding'      =>  '8bit',
@@ -16,22 +15,34 @@ class Email {
         'Username'      =>  'user',
         'Password'      =>  'pass',
     );
-    
-    public static function factory($config = array(), $driver = NULL)
+
+    public function __construct($config = array())
     {
-        if ($driver === NULL)
-        {
-            // Use the default driver
-            $driver = self::$_driver;
-        }
-        // Set the class name
-        $class = 'Email_'.$driver;
+        $email = new Email_PHPMailer();
         
-        $email = new $class();
-        
-        foreach (Arr::merge(self::$_config, $config) as $key => $value)
-            $email->$key = $value;
+        foreach (Arr::merge($this->_config, $config) as $key => $value)
+            $this->$key = $value;
         
         return $email;
+    }
+    
+    public function prepare($subject, $to, $view = '', $site = array(), $data = array())
+    {
+        $this->Subject = $subject;
+        $this->AddAddress($to);
+
+        $template = new \Phalcon\Mvc\View();
+        $template->setViewsDir('../app/views/');
+        $template->setMainView(NULL);
+        
+        $template->setVar('site', $site);
+        $template->setVar('data', $data);
+        $template->setVar('content', $template->getRender('email', $view));
+        
+        $body = $template->getRender('email', 'template');
+        
+        $this->MsgHTML($body);
+        
+        return $body;
     }
 } // End Email
