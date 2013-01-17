@@ -30,8 +30,10 @@ class Auth
     
     private function __construct()
     {
-        if ($config = \Phalcon\DI::getDefault()->getShared('config')->auth)
-            $this->_config = get_object_vars($config);
+        if ($_config = \Phalcon\DI::getDefault()->getShared('config')->auth)
+            foreach ($_config as $key => $value)
+                $this->_config[$key] = $value;
+        
         $this->_session = \Phalcon\DI::getDefault()->getShared('session');
     }
     
