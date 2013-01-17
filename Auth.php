@@ -4,7 +4,7 @@ class Auth
 {
     private $_config = array(
         'hash_method'   =>  'sha256',
-        'hash_key'      => 'Shared secret key',
+        'hash_key'      =>  'Shared secret key',
         'lifetime'      =>  1209600,
         'session_key'   =>  'auth_user',
         'session_roles' =>  TRUE,
@@ -30,6 +30,8 @@ class Auth
     
     private function __construct()
     {
+        if ($config = \Phalcon\DI::getDefault()->getShared('config')->auth)
+            $this->_config = get_object_vars($config);
         $this->_session = \Phalcon\DI::getDefault()->getShared('session');
     }
     
@@ -141,11 +143,7 @@ class Auth
                     Cookie::set('authautologin', $token->token, $token->expires - time());
                     
                     // Finish the login
-                    \Phalcon\DI::getDefault()->getShared('db')->update('users',
-                        array('logins', 'last_login'),
-                        array($user->logins+1, date('Y-m-d H:i:s')),
-                        strtr('id = :id', array(':id' => $user->id))
-                    );
+                    \Phalcon\DI::getDefault()->getShared('db')->execute('UPDATE `users` SET `logins` = ?, `last_login` = ? WHERE `id` = ?', array($user->logins+1, date('Y-m-d H:i:s'), $user->id));
                     
                     // Regenerate session_id
                     session_regenerate_id();
@@ -210,11 +208,7 @@ class Auth
             }
 
             // Finish the login
-            \Phalcon\DI::getDefault()->getShared('db')->update('users',
-                array('logins', 'last_login'),
-                array($user->logins+1, date('Y-m-d H:i:s')),
-                strtr('id = :id', array(':id' => $user->id))
-            );
+            \Phalcon\DI::getDefault()->getShared('db')->execute('UPDATE `users` SET `logins` = ?, `last_login` = ? WHERE `id` = ?', array($user->logins+1, date('Y-m-d H:i:s'), $user->id));
             
             // Regenerate session_id
             session_regenerate_id();
