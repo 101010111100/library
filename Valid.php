@@ -104,8 +104,11 @@ class Valid extends \Phalcon\Mvc\Model\Validator
             break;
             case 'file_size':
                 if ($value['error'] === UPLOAD_ERR_INI_SIZE)
+                {
                     // Upload is larger than PHP allowed size (upload_max_filesize)
+                    $this->appendMessage(__('The uploaded file exceeds the max filesize'), $field, "file_size");
                     return FALSE;
+                }
                 
                 if ($value['error'] !== UPLOAD_ERR_OK)
                     // The upload failed, no size to check
