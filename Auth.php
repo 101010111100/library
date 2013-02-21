@@ -183,45 +183,48 @@ class Auth
             // Load the user
             $user = Users::findFirst(array('username=:username:', 'bind' => array('username' => $username)));
         }
-        if (is_string($password))
-        {
-            // Create a hashed password
-            $password = $this->hash($password);
-        }
         
-        $roles = Arr::from_model($user->getRoles(), 'name', 'id');
-
-        // If the passwords match, perform a login
-        if ($user && Arr::get($roles, 'login') && $user->password === $password)
+        if ($user)
         {
-            if ($remember === TRUE)
+            $roles = Arr::from_model($user->getRoles(), 'name', 'id');
+            
+            if (is_string($password))
             {
-                // Create a new autologin token
-                $token = new Tokens();
-                $token->user_id = $user->id;
-                $token->user_agent = sha1(\Phalcon\DI::getDefault()->getShared('request')->getUserAgent());
-                $token->token = $this->create_token();
-                $token->created = time();
-                $token->expires = time() + $this->_config['lifetime'];
-                $token->create();
-                
-                // Set the autologin cookie
-                Cookie::set('authautologin', $token->token, $this->_config['lifetime']);
+                // Create a hashed password
+                $password = $this->hash($password);
             }
 
-            // Finish the login
-            \Phalcon\DI::getDefault()->getShared('db')->execute('UPDATE `users` SET `logins` = ?, `last_login` = ? WHERE `id` = ?', array($user->logins+1, date('Y-m-d H:i:s'), $user->id));
-            
-            // Regenerate session_id
-            session_regenerate_id();
+            // If the passwords match, perform a login
+            if (Arr::get($roles, 'login') && $user->password === $password)
+            {
+                if ($remember === TRUE)
+                {
+                    // Create a new autologin token
+                    $token = new Tokens();
+                    $token->user_id = $user->id;
+                    $token->user_agent = sha1(\Phalcon\DI::getDefault()->getShared('request')->getUserAgent());
+                    $token->token = $this->create_token();
+                    $token->created = time();
+                    $token->expires = time() + $this->_config['lifetime'];
+                    $token->create();
 
-            // Store user in session
-            $user = Arr::to_object(Arr::merge(get_object_vars($user), array('roles' => $roles)));
-            $this->_session->set($this->_config['session_key'], $user);
-            
-            return TRUE;
+                    // Set the autologin cookie
+                    Cookie::set('authautologin', $token->token, $this->_config['lifetime']);
+                }
+
+                // Finish the login
+                \Phalcon\DI::getDefault()->getShared('db')->execute('UPDATE `users` SET `logins` = ?, `last_login` = ? WHERE `id` = ?', array($user->logins+1, date('Y-m-d H:i:s'), $user->id));
+
+                // Regenerate session_id
+                session_regenerate_id();
+
+                // Store user in session
+                $user = Arr::to_object(Arr::merge(get_object_vars($user), array('roles' => $roles)));
+                $this->_session->set($this->_config['session_key'], $user);
+
+                return TRUE;
+            }
         }
-
         // Login failed
         return FALSE;
     }
